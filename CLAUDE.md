@@ -40,6 +40,7 @@ Repository → Mirroring in GitLab.
 ## Performance
 
 - `crates/core/benches/mod_module.rs`: divan (CodSpeed shim) bench of `ModModule::inspect`;
+  `crates/core/benches/parse.rs`: `ModName`/`ModVersion` parsing and version sorting;
   `cargo bench -p modhub-core`. A new hot path gets its bench in the same change.
 - `tools/load.sh`: HTTP numbers for README (needs `nix build` first). Update the README
   table when they move.
@@ -62,8 +63,8 @@ Repository → Mirroring in GitLab.
 - Gate: `tools/gate quick` (pre-commit hook), `tools/gate all` before merging to main,
   `tools/gate cov` for branch coverage.
 - CI: GitHub Actions only (`.github/workflows/ci.yml`), runs on the mirror after it
-  updates `main`: `tools/gate all`, coverage → Codecov, benches → CodSpeed (both OIDC, no
-  secrets), MSRV check. Jobs run in `devShells.ci` / `devShells.msrv`: keep `ci` to
+  updates `main`: `tools/gate all`, coverage → Codecov (OIDC, no secrets), MSRV check.
+  `.github/workflows/codspeed.yml`: benches → CodSpeed (OIDC) on `main` and on pull requests. Jobs run in `devShells.ci` / `devShells.msrv`: keep `ci` to
   packages in the nixos binary cache, so CI never builds tools from source. MSRV is
   `rust-version` in `Cargo.toml`; the flake reads it from there. No GitLab CI.
 - Night runs (copied from atelier, reports for an agent to work from):

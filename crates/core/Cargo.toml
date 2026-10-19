@@ -34,3 +34,7 @@ path = "tests/fuzz/main.rs"
 [[bench]]
 name = "mod_module"
 harness = false
+
+[[bench]]
+name = "parse"
+harness = false

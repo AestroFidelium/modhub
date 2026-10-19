@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/AestroFidelium/modhub/actions/workflows/ci.yml/badge.svg)](https://github.com/AestroFidelium/modhub/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/AestroFidelium/modhub/graph/badge.svg)](https://codecov.io/gh/AestroFidelium/modhub)
-[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/AestroFidelium/modhub)
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/AestroFidelium/modhub?utm_source=badge)
 [![MSRV](https://img.shields.io/badge/MSRV-1.89-orange.svg)](Cargo.toml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 

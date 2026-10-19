@@ -1,0 +1,40 @@
+# Benches under CodSpeed's CPU simulation. Runs on `main` for the baseline and on pull
+# requests, so CodSpeed can report each change against it.
+name: CodSpeed
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  bench:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # CodSpeed upload through OIDC, no token secret
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/nix
+        with:
+          shell: ci
+      - run: nix develop .#ci -c cargo codspeed build -p modhub-core
+      # The benches run under CodSpeed's instrumentation, which traces every child
+      # process: export the shell's PATH instead of entering `nix develop` inside it.
+      - run: echo "PATH=$(nix develop .#ci -c printenv PATH)" >>"$GITHUB_ENV"
+      - uses: CodSpeedHQ/action@v5
+        with:
+          mode: simulation
+          run: cargo codspeed run -p modhub-core
