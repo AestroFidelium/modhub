@@ -38,6 +38,9 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 # ── tests ──
 bolero = "0.13.7"
 futures-util = { version = "0.3.34", default-features = false }
+# Benches: divan under CodSpeed. 5.0.0: 5.0.1+ macros need indexmap >= 2.11.4, and
+# bolero-generator-derive pins =2.11.2.
+divan = { package = "codspeed-divan-compat", version = "5.0.0" }
 wasm-encoder = "0.244.0"  # same release as wasmparser
 tokio = "1.53.3"
 tower = { version = "0.5.3", features = ["util"] }
@@ -69,6 +72,15 @@ module_name_repetitions = "allow"
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[profile.bench]
+inherits = "release"
+debug = true
+
+[profile.profiling]
+inherits = "release"
+debug = true
+strip = false
 
 [profile.fuzz]
 inherits = "dev"

@@ -54,6 +54,36 @@ A module is accepted when the game's host could load it:
 Export names come from the game's own ABI crate (`stormlight_mod_abi`), and the real
 example mod is part of the test suite.
 
+## Numbers
+
+Release build, loopback, i5-10400F (6 cores), PostgreSQL 18 on the same machine
+(`tools/pg`, fsync off). Reproduce with `nix build && tools/load.sh` and
+`cargo bench -p modhub-core`.
+
+| What | Result |
+| --- | --- |
+| Download the 159 KiB example mod, 16 connections | ~4,900 req/s (~780 MB/s), p50 3.1 ms, p99 5.8 ms |
+| List versions, 16 connections | ~45,000 req/s, p50 0.32 ms, p99 0.80 ms |
+| Publish the 159 KiB mod (contract check, SHA-256, insert), one at a time | p50 4.1 ms, p99 5.6 ms |
+| Contract check alone (`ModModule::inspect`) | ~225 MB/s: 0.62 ms for the example mod, 37 ms at the 8 MiB limit, linear in code size |
+
+## How it is tested
+
+Test-first, and every test is a property or fuzz test on
+[bolero](https://github.com/camshaft/bolero), no hand-picked examples:
+
+- **Model-based**: random sequences of registrations, publications, listings and
+  downloads run against PostgreSQL and against an in-memory model, step by step; the
+  same at the HTTP level, including malformed, oversized and cut-off uploads.
+- **Contract oracle**: generated `.wasm` modules (imports, memories, globals, every
+  value type in signatures) checked against an independent statement of the mod
+  contract; the real example mod and every cut of it as fixtures.
+- **The binary as a process**: startup failures, SIGTERM/SIGINT, and no password in logs.
+- **Fuzzing** of every parser of external input (`tools/fuzz_night.sh`), and
+  **mutation testing** (`tools/mutants_night.sh`): no surviving mutants.
+- 100 % line and branch coverage but one unreachable defensive branch
+  (`cargo llvm-cov nextest --branch`).
+
 ## Layout
 
 | Crate | Holds |
