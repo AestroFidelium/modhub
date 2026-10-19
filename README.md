@@ -3,8 +3,8 @@
 A registry for [Stormlight](https://github.com/AestroFidelium/stormlight-sdk) WASM mods:
 publish a mod, version it, validate it against the mod ABI, and serve it to game servers.
 
-> Status: early. Registration, publishing and listing work end to end over HTTP;
-> mod uploads and WASM validation come next.
+Every upload is checked against the game's own mod contract before it is stored, so
+a server never downloads a mod its engine would refuse to load.
 
 ## Run
 
@@ -12,8 +12,10 @@ publish a mod, version it, validate it against the mod ABI, and serve it to game
 tools/pg start                      # local PostgreSQL (or point DATABASE_URL elsewhere)
 nix run                             # listens on 127.0.0.1:8080
 curl -X POST localhost:8080/mods -H 'content-type: application/json' -d '{"name":"gpu-cloth"}'
-curl -X PUT  localhost:8080/mods/gpu-cloth/versions/1.0.0
+curl -X PUT  localhost:8080/mods/gpu-cloth/versions/1.0.0 \
+     -H 'content-type: application/wasm' --data-binary @gpu_cloth.wasm
 curl         localhost:8080/mods/gpu-cloth/versions
+curl -o gpu_cloth.wasm localhost:8080/mods/gpu-cloth/versions/1.0.0
 ```
 
 | Variable | Default | |
@@ -29,8 +31,13 @@ Stops on SIGTERM or Ctrl-C after in-flight requests finish.
 | Method | Path | Does |
 | --- | --- | --- |
 | `POST` | `/mods` | register `{"name": "gpu-cloth"}` → `201` |
-| `PUT` | `/mods/{name}/versions/{version}` | publish a release → `201` |
+| `PUT` | `/mods/{name}/versions/{version}` | publish the `application/wasm` body → `201` with its `sha256`, size and entry points |
+| `GET` | `/mods/{name}/versions/{version}` | download → `200 application/wasm`, `ETag` = SHA-256, cached as immutable |
 | `GET` | `/mods/{name}/versions` | versions, lowest precedence first → `200` |
+
+Releases are immutable: a version is published once (`409 version_exists` after) and
+always serves the same bytes. The SHA-256 stored with a module is checked on every
+download; a mismatch is a `500`, never a corrupt module.
 
 Errors are JSON, `{"error": "version_exists", "message": "…"}`: branch on `error`.
 

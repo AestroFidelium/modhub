@@ -8,4 +8,4 @@ mod store;
 pub use api::router;
 pub use config::{Config, ConfigError};
 pub use serve::serve;
-pub use store::{Store, StoreError};
+pub use store::{Sha256, Store, StoreError, StoredModule};

@@ -1,5 +1,6 @@
 //! A mod's WebAssembly module, checked against the contract of the Stormlight host.
 
+mod checked;
 mod error;
 mod signature;
 
@@ -11,6 +12,7 @@ use wasmparser::{
     BinaryReaderError, CompositeInnerType, Import, Parser, Payload, Validator, WasmFeatures,
 };
 
+pub use checked::CheckedModule;
 pub use error::{ExportKind, ModuleError};
 pub use signature::{Signature, ValType};
 
@@ -152,6 +154,15 @@ impl ModModule {
             entry_points,
             memory_pages,
         })
+    }
+
+    /// [`ModModule::inspect`] that keeps hold of the bytes, for code that stores them.
+    ///
+    /// # Errors
+    ///
+    /// As [`ModModule::inspect`].
+    pub fn check(bytes: &[u8]) -> Result<CheckedModule<'_>, ModuleError> {
+        CheckedModule::new(bytes)
     }
 
     /// The runtime entry points the mod exports, in [`EntryPoint::ALL`] order.

@@ -17,6 +17,14 @@ pub enum StoreError {
         /// The requested name.
         name: ModName,
     },
+    /// The mod exists but has no such version.
+    #[error("`{name}` has no version {version}")]
+    UnknownVersion {
+        /// The mod.
+        name: ModName,
+        /// The requested version.
+        version: ModVersion,
+    },
     /// The version is already published; releases are immutable.
     #[error("`{name}` {version} is already published, and releases are immutable")]
     VersionExists {
@@ -34,6 +42,14 @@ pub enum StoreError {
         text: String,
         /// Why it does not parse.
         source: ModVersionError,
+    },
+    /// A stored module no longer matches the digest it was stored with.
+    #[error("stored module of `{name}` {version} does not match its SHA-256")]
+    CorruptModule {
+        /// The mod.
+        name: ModName,
+        /// The version.
+        version: ModVersion,
     },
     /// The database failed or is unreachable.
     #[error("database operation failed")]

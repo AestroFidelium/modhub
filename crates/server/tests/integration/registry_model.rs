@@ -1,13 +1,17 @@
 //! The store against an in-memory model of the registry: any sequence of registrations,
-//! publications and listings gives the same outcomes on PostgreSQL as on a map.
+//! publications, listings and downloads gives the same outcomes on PostgreSQL as on a
+//! map.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+use std::fmt::Write;
 
 use bolero::{TypeGenerator, check, produce};
-use modhub_core::{ModName, ModVersion};
+use modhub_core::{ModModule, ModName, ModVersion};
 use modhub_server::StoreError;
+use sha2::{Digest, Sha256};
 
 use crate::database::TestDb;
+use crate::modules::module_for;
 use crate::slots::{NameSlot, VersionSlot};
 
 #[derive(Debug, TypeGenerator)]
@@ -22,6 +26,10 @@ enum Step {
     ListVersions {
         name: NameSlot,
     },
+    Download {
+        name: NameSlot,
+        version: VersionSlot,
+    },
 }
 
 #[derive(Debug, TypeGenerator)]
@@ -34,16 +42,27 @@ struct Scenario {
 #[derive(Debug, PartialEq, Eq)]
 enum Outcome {
     Done,
+    /// A publication, with the digest the store reports.
+    Published(String),
     Versions(Vec<ModVersion>),
+    /// A download: the bytes and the digest that came with them.
+    Module {
+        bytes: Vec<u8>,
+        sha256: String,
+    },
     NameTaken,
     UnknownMod,
+    UnknownVersion,
     VersionExists,
 }
 
-impl From<Result<(), StoreError>> for Outcome {
-    fn from(result: Result<(), StoreError>) -> Self {
-        result.map_or_else(Self::from_error, |()| Self::Done)
-    }
+fn sha256_hex(bytes: &[u8]) -> String {
+    Sha256::digest(bytes)
+        .iter()
+        .fold(String::new(), |mut hex, byte| {
+            write!(hex, "{byte:02x}").unwrap();
+            hex
+        })
 }
 
 impl Outcome {
@@ -52,14 +71,16 @@ impl Outcome {
             StoreError::NameTaken { .. } => Self::NameTaken,
             StoreError::UnknownMod { .. } => Self::UnknownMod,
             StoreError::VersionExists { .. } => Self::VersionExists,
+            StoreError::UnknownVersion { .. } => Self::UnknownVersion,
             other => panic!("unexpected store error: {other}"),
         }
     }
 }
 
-/// The registry as a map from name to its published versions, ordered by precedence.
+/// The registry as a map from name to its published versions (ordered by precedence)
+/// and their modules.
 #[derive(Default)]
-struct Model(BTreeMap<ModName, BTreeSet<ModVersion>>);
+struct Model(BTreeMap<ModName, BTreeMap<ModVersion, Vec<u8>>>);
 
 impl Model {
     fn apply(&mut self, step: &Step) -> Outcome {
@@ -68,25 +89,38 @@ impl Model {
                 if self.0.contains_key(&name.name()) {
                     return Outcome::NameTaken;
                 }
-                self.0.insert(name.name(), BTreeSet::new());
+                self.0.insert(name.name(), BTreeMap::new());
                 Outcome::Done
             }
             Step::Publish { name, version } => match self.0.get_mut(&name.name()) {
                 None => Outcome::UnknownMod,
+                Some(versions) if versions.contains_key(&version.version()) => {
+                    Outcome::VersionExists
+                }
                 Some(versions) => {
-                    if versions.insert(version.version()) {
-                        Outcome::Done
-                    } else {
-                        Outcome::VersionExists
-                    }
+                    let module = module_for(version);
+                    let digest = sha256_hex(&module);
+                    versions.insert(version.version(), module);
+                    Outcome::Published(digest)
                 }
             },
             Step::ListVersions { name } => self
                 .0
                 .get(&name.name())
                 .map_or(Outcome::UnknownMod, |versions| {
-                    Outcome::Versions(versions.iter().cloned().collect())
+                    Outcome::Versions(versions.keys().cloned().collect())
                 }),
+            Step::Download { name, version } => match self.0.get(&name.name()) {
+                None => Outcome::UnknownMod,
+                Some(versions) => {
+                    versions
+                        .get(&version.version())
+                        .map_or(Outcome::UnknownVersion, |module| Outcome::Module {
+                            bytes: module.clone(),
+                            sha256: sha256_hex(module),
+                        })
+                }
+            },
         }
     }
 }
@@ -94,13 +128,26 @@ impl Model {
 fn run_on_store(db: &TestDb, step: &Step) -> Outcome {
     let store = db.store();
     match *step {
-        Step::Register { name } => db.run(store.register(&name.name())).into(),
-        Step::Publish { name, version } => db
-            .run(store.publish(&name.name(), &version.version()))
-            .into(),
+        Step::Register { name } => db
+            .run(store.register(&name.name()))
+            .map_or_else(Outcome::from_error, |()| Outcome::Done),
+        Step::Publish { name, version } => {
+            let bytes = module_for(version);
+            let module = ModModule::check(&bytes).unwrap();
+            db.run(store.publish(&name.name(), &version.version(), &module))
+                .map_or_else(Outcome::from_error, |digest| {
+                    Outcome::Published(digest.to_string())
+                })
+        }
         Step::ListVersions { name } => db
             .run(store.versions(&name.name()))
             .map_or_else(Outcome::from_error, Outcome::Versions),
+        Step::Download { name, version } => db
+            .run(store.download(&name.name(), &version.version()))
+            .map_or_else(Outcome::from_error, |stored| Outcome::Module {
+                sha256: stored.sha256().to_string(),
+                bytes: stored.into_bytes(),
+            }),
     }
 }
 

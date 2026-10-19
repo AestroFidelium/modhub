@@ -16,6 +16,7 @@ modhub-core = { path = "crates/core" }
 
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "tokio"] }
 semver = "1.0.28"
+sha2 = "0.11.1"
 # The mod ABI: export names the validator checks for. Pinned to the commit the game
 # builds against; bump together with the engine.
 stormlight_mod_abi = { git = "https://github.com/AestroFidelium/stormlight-sdk.git", rev = "d6440ec74481e283e2381b322ceb5f3525c25129" }
@@ -36,6 +37,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 # ── tests ──
 bolero = "0.13.7"
+futures-util = { version = "0.3.34", default-features = false }
 wasm-encoder = "0.244.0"  # same release as wasmparser
 tokio = "1.53.3"
 tower = { version = "0.5.3", features = ["util"] }
