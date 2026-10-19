@@ -1,0 +1,6 @@
+# Same nightly as atelier and hennige: one toolchain in the nix store.
+# The code itself targets stable Rust; nightly is only the shared dev toolchain.
+[toolchain]
+channel = "nightly-2026-06-13"
+components = ["rust-src", "rustfmt", "clippy", "llvm-tools-preview"]
+profile = "minimal"

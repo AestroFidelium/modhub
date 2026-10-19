@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# The quality gate. Nothing is committed that fails it.
+#
+#   tools/gate quick   fmt + clippy + nextest          (pre-commit hook runs this)
+#   tools/gate all     quick + doctests + deny + machete + typos + nix lints   (before merging to main)
+#   tools/gate cov     branch coverage report (cargo llvm-cov nextest --branch) → target/llvm-cov/html
+#
+# Runs inside the nix dev shell; re-enters it when called from outside (e.g. a git hook).
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+if [[ -z "${IN_NIX_SHELL:-}" ]]; then
+  exec nix develop --quiet -c "$0" "$@"
+fi
+
+step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+
+quick() {
+  step "fmt";    cargo fmt --all --check
+  step "clippy"; cargo clippy --workspace --all-targets --all-features --quiet -- -D warnings
+  step "tests";  cargo nextest run --workspace --status-level fail --final-status-level fail
+}
+
+all() {
+  quick
+  step "doctests"; cargo test --workspace --doc --quiet
+  step "deny";     cargo deny --log-level error check
+  step "machete";  cargo machete
+  step "typos";    typos
+  step "nix";      nixfmt --check flake.nix && statix check . && deadnix --fail .
+}
+
+cov() {
+  cargo llvm-cov nextest --workspace --branch --html
+}
+
+case "${1:-quick}" in
+  quick) quick ;;
+  all) all ;;
+  cov) cov ;;
+  *) echo "usage: tools/gate [quick|all|cov]" >&2; exit 2 ;;
+esac
+step "gate ${1:-quick}: green"
