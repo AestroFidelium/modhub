@@ -7,6 +7,10 @@ mod ABI, serve). Portfolio project for Rust backend roles: tokio, axum, PostgreS
 ## Shape
 
 - `crates/core`: pure domain, no IO. Every rule a request is checked against lives here.
+  `mod_module.rs`: `ModModule::inspect`, the mod contract (mirrors stormlight
+  `shared/modloader/src/host.rs`; export names from `stormlight_mod_abi`, pinned by rev).
+  Test oracle: `tests/support/contract.rs`; module builder: `tests/support/modules.rs`.
+- wasmparser/wasm-encoder stay at 0.244 until bolero drops its `indexmap =2.11.2` pin.
 - `crates/server`: thin shell over core. `api` (axum router; handlers parse into core
   types, `ApiError` maps every failure to a status and a stable JSON `error` code;
   store failures log and answer `500 internal`), `store` (PostgreSQL via sqlx `query!`

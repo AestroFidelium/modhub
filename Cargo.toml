@@ -16,6 +16,12 @@ modhub-core = { path = "crates/core" }
 
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "tokio"] }
 semver = "1.0.28"
+# The mod ABI: export names the validator checks for. Pinned to the commit the game
+# builds against; bump together with the engine.
+stormlight_mod_abi = { git = "https://github.com/AestroFidelium/stormlight-sdk.git", rev = "d6440ec74481e283e2381b322ceb5f3525c25129" }
+# 0.244, not newer: from 0.245 wasmparser requires indexmap >= 2.13, and
+# bolero-generator-derive 0.13.5 pins indexmap =2.11.2. Raise together with bolero.
+wasmparser = { version = "0.244.0", default-features = false, features = ["std", "validate", "features"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 # 0.8, not 0.9: the sqlx-cli in nixpkgs is 0.8.6 and writes the offline query cache
@@ -30,6 +36,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 # ── tests ──
 bolero = "0.13.7"
+wasm-encoder = "0.244.0"  # same release as wasmparser
 tokio = "1.53.3"
 tower = { version = "0.5.3", features = ["util"] }
 http-body-util = "0.1.5"

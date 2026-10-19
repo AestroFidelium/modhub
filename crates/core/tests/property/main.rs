@@ -4,12 +4,20 @@
 //! lets tests unwrap, index and panic).
 
 #[cfg(test)]
+#[path = "../support/contract.rs"]
+mod contract;
+#[cfg(test)]
+#[path = "../support/modules.rs"]
+mod modules;
+#[cfg(test)]
 #[path = "../support/names.rs"]
 mod names;
 #[cfg(test)]
 #[path = "../support/versions.rs"]
 mod versions;
 
+#[cfg(test)]
+mod mod_module;
 #[cfg(test)]
 mod mod_name;
 #[cfg(test)]

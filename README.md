@@ -34,11 +34,24 @@ Stops on SIGTERM or Ctrl-C after in-flight requests finish.
 
 Errors are JSON, `{"error": "version_exists", "message": "…"}`: branch on `error`.
 
+## The mod contract
+
+A module is accepted when the game's host could load it:
+
+- valid WebAssembly 2.0 (no threads, no shared memory, no components), at most 8 MiB;
+- **no imports at all**: mods run with no WASI and no host calls;
+- exports `memory` (initial size within the host's 64 MiB) and `mod_register: () -> i64`;
+- any of `mod_handle`, `mod_trigger`, `mod_tick` it exports have the host's signatures,
+  and come with `mod_alloc: (i32) -> i32`.
+
+Export names come from the game's own ABI crate (`stormlight_mod_abi`), and the real
+example mod is part of the test suite.
+
 ## Layout
 
 | Crate | Holds |
 | --- | --- |
-| `crates/core` (`modhub-core`) | Pure domain: names, versions, validation rules. No IO. |
+| `crates/core` (`modhub-core`) | Pure domain: names, versions, and `ModModule`, the check of a `.wasm` against the Stormlight mod contract. No IO. |
 | `crates/server` (`modhub-server`) | HTTP API (axum) over a PostgreSQL store (sqlx, compile-time checked queries). |
 
 ## Development
