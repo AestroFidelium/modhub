@@ -9,7 +9,8 @@ rust-version = "1.89"
 license = "MIT OR Apache-2.0"
 publish = false
 authors = ["AestroFidelium"]
-repository = "https://gitlab.com/AestroFidelium/modhub"
+# The public mirror: the GitLab upstream is private.
+repository = "https://github.com/AestroFidelium/modhub"
 
 [workspace.dependencies]
 modhub-core = { path = "crates/core" }
