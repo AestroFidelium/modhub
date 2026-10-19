@@ -8,46 +8,7 @@ use modhub_core::{ModName, ModVersion};
 use modhub_server::StoreError;
 
 use crate::database::TestDb;
-
-/// One of four fixed names, so registrations and publications collide often.
-#[derive(Debug, Clone, Copy, TypeGenerator)]
-struct NameSlot(#[generator(0u8..4)] u8);
-
-impl NameSlot {
-    fn name(self) -> ModName {
-        format!("mod-{}", char::from(b'a' + self.0))
-            .parse()
-            .unwrap()
-    }
-}
-
-#[derive(Debug, Clone, Copy, TypeGenerator)]
-enum Stage {
-    Release,
-    Beta,
-}
-
-/// A version from a small grid, so duplicate publications happen.
-#[derive(Debug, Clone, Copy, TypeGenerator)]
-struct VersionSlot {
-    #[generator(0u64..=2)]
-    major: u64,
-    #[generator(0u64..=2)]
-    minor: u64,
-    stage: Stage,
-}
-
-impl VersionSlot {
-    fn version(self) -> ModVersion {
-        let suffix = match self.stage {
-            Stage::Release => "",
-            Stage::Beta => "-beta",
-        };
-        format!("{}.{}.0{suffix}", self.major, self.minor)
-            .parse()
-            .unwrap()
-    }
-}
+use crate::slots::{NameSlot, VersionSlot};
 
 #[derive(Debug, TypeGenerator)]
 enum Step {

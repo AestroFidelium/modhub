@@ -1,29 +1,11 @@
 //! A version row that is not a valid `ModVersion` (written past the application) is
 //! reported as corruption, not silently skipped or turned into a panic.
 
-use bolero::{TypeGenerator, check};
+use bolero::check;
 use modhub_server::StoreError;
 
 use crate::database::TestDb;
-
-#[derive(Debug, Clone, Copy, TypeGenerator)]
-enum BadVersion {
-    Empty,
-    NotSemver,
-    LeadingZero,
-    BuildMetadata,
-}
-
-impl BadVersion {
-    fn text(self) -> &'static str {
-        match self {
-            Self::Empty => "",
-            Self::NotSemver => "latest",
-            Self::LeadingZero => "01.0.0",
-            Self::BuildMetadata => "1.0.0+nightly",
-        }
-    }
-}
+use crate::slots::BadVersion;
 
 #[test]
 fn invalid_stored_version_is_reported_as_corruption() {

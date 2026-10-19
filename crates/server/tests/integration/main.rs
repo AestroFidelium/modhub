@@ -6,7 +6,17 @@
 #[cfg(test)]
 #[path = "../support/database.rs"]
 mod database;
+#[cfg(test)]
+#[path = "../support/http.rs"]
+mod http;
+#[cfg(test)]
+#[path = "../support/slots.rs"]
+mod slots;
 
+#[cfg(test)]
+mod api_failure;
+#[cfg(test)]
+mod api_model;
 #[cfg(test)]
 mod corrupt_version;
 #[cfg(test)]

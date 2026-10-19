@@ -13,13 +13,19 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+axum.workspace = true
 modhub-core.workspace = true
+serde.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 bolero.workspace = true
+http-body-util.workspace = true
+serde_json.workspace = true
 tokio.workspace = true
+tower.workspace = true
 
 [[test]]
 name = "integration"
