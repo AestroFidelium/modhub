@@ -1,0 +1,28 @@
+name: Nix dev shell
+description: Install Nix, restore the Nix store and Cargo caches, and realise one dev shell.
+
+inputs:
+  shell:
+    description: The flake dev shell the job runs in (`devShells.<shell>`).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: cachix/install-nix-action@v31
+    - uses: nix-community/cache-nix-action@v7
+      with:
+        primary-key: nix-${{ inputs.shell }}-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock', 'rust-toolchain.toml') }}
+        restore-prefixes-first-match: nix-${{ inputs.shell }}-${{ runner.os }}-
+        gc-max-store-size-linux: 4G
+    - uses: actions/cache@v6
+      with:
+        path: |
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+        key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: cargo-${{ runner.os }}-
+    - name: Realise the dev shell
+      shell: bash
+      run: nix develop .#${{ inputs.shell }} -c true
