@@ -20,6 +20,7 @@ wasmparser.workspace = true
 
 [dev-dependencies]
 bolero.workspace = true
+divan.workspace = true
 wasm-encoder.workspace = true
 
 [[test]]
@@ -29,3 +30,7 @@ path = "tests/property/main.rs"
 [[test]]
 name = "fuzz"
 path = "tests/fuzz/main.rs"
+
+[[bench]]
+name = "mod_module"
+harness = false

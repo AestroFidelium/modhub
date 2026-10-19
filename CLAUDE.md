@@ -28,6 +28,13 @@ mod ABI, serve). Portfolio project for Rust backend roles: tokio, axum, PostgreS
   query or a migration run `cargo sqlx prepare --workspace` and commit `.sqlx/`
   (`tools/gate all` checks it is current).
 
+## Performance
+
+- `crates/core/benches/mod_module.rs`: divan (CodSpeed shim) bench of `ModModule::inspect`;
+  `cargo bench -p modhub-core`. A new hot path gets its bench in the same change.
+- `tools/load.sh`: HTTP numbers for README (needs `nix build` first). Update the README
+  table when they move.
+
 ## Database
 
 - `tools/pg start|stop|status|psql`: one dev cluster under `.pg/`, unix socket only,

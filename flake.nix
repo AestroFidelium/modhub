@@ -40,7 +40,7 @@
           src = pkgs.lib.cleanSource ./.;
           # `cargoHash`, not `cargoLock.lockFile`: the latter fetches from crates.io's API
           # with a curl User-Agent, which crates.io refuses. Update after Cargo.lock changes.
-          cargoHash = "sha256-O5bt44YHD5OnYvLet3UUWD88kqN1HNPrHV+EQu2LNaI=";
+          cargoHash = "sha256-A00rm09Hm3oeF0kGooxow7b1u3nZ4kuvNc4IkYJ2/Ec=";
           cargoBuildFlags = [
             "--package"
             "modhub-server"
@@ -82,6 +82,17 @@
           deadnix
         ];
 
+        cargo-codspeed = pkgs.cargo-codspeed.overrideAttrs (_: {
+          doCheck = false; # its own tests fail to build on current nightly (as in atelier)
+        });
+
+        # No optimisation without a number: divan under CodSpeed + a profiler.
+        perfTools = with pkgs; [
+          cargo-codspeed
+          samply
+          oha # HTTP load generator for the numbers in README.md
+        ];
+
         nativeTools = with pkgs; [
           mold
           clang
@@ -98,7 +109,7 @@
         packages.default = modhub;
 
         devShells.default = pkgs.mkShell {
-          packages = [ rust ] ++ testTools ++ lintTools ++ nativeTools ++ dbTools;
+          packages = [ rust ] ++ testTools ++ lintTools ++ perfTools ++ nativeTools ++ dbTools;
 
           # Versioned hooks in .githooks/: pre-commit runs `tools/gate quick`,
           # commit-msg enforces Conventional Commits. Fix hooks there, never in .git/hooks.
