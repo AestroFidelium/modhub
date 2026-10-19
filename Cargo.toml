@@ -1,0 +1,53 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+publish = false
+authors = ["AestroFidelium"]
+repository = "https://gitlab.com/AestroFidelium/modhub"
+
+[workspace.dependencies]
+modhub-core = { path = "crates/core" }
+
+thiserror = "2.0.21"
+
+# ── tests ──
+bolero = "0.13.7"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Library code returns typed errors instead of panicking (tests are exempt, see clippy.toml).
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+indexing_slicing = "warn"
+dbg_macro = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+todo = "warn"
+# `#[must_use]` is applied deliberately to values that are a bug to drop, not to every getter.
+must_use_candidate = "allow"
+module_name_repetitions = "allow"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.fuzz]
+inherits = "dev"
+opt-level = 3
+incremental = false
+codegen-units = 1

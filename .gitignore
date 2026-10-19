@@ -1,0 +1,8 @@
+/target
+/result
+/.direnv
+
+# Night runs (tools/fuzz_night.sh, tools/mutants_night.sh) and ad-hoc `cargo mutants`.
+/crashes/
+/mutants/
+/mutants.out*
