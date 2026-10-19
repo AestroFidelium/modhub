@@ -8,6 +8,7 @@ use bolero::{TypeGenerator, check};
 use serde_json::json;
 
 use crate::http::{Payload, Reply, TestApi};
+use crate::modules::EXAMPLE_MOD;
 use crate::slots::BadVersion;
 
 #[derive(Debug, Clone, Copy, TypeGenerator)]
@@ -15,6 +16,7 @@ enum Request {
     Register,
     Publish,
     ListVersions,
+    Download,
 }
 
 fn send_request(api: &TestApi, request: Request) -> Reply {
@@ -24,7 +26,12 @@ fn send_request(api: &TestApi, request: Request) -> Reply {
             "/mods",
             Payload::Json(json!({ "name": "cloth" })),
         ),
-        Request::Publish => api.send(Method::PUT, "/mods/cloth/versions/1.0.0", Payload::Empty),
+        Request::Publish => api.send(
+            Method::PUT,
+            "/mods/cloth/versions/1.0.0",
+            Payload::Wasm(EXAMPLE_MOD.to_vec()),
+        ),
+        Request::Download => api.send(Method::GET, "/mods/cloth/versions/1.0.0", Payload::Empty),
         Request::ListVersions => api.send(Method::GET, "/mods/cloth/versions", Payload::Empty),
     }
 }
@@ -83,9 +90,12 @@ fn corrupt_stored_version_gives_internal_error() {
         api.run(api.store().register(&"cloth".parse().unwrap()))
             .unwrap();
         api.run(
-            sqlx::query("INSERT INTO releases (mod_id, version) SELECT id, $1 FROM mods")
-                .bind(bad.text())
-                .execute(api.pool()),
+            sqlx::query(
+                "INSERT INTO releases (mod_id, version, module, sha256) \
+                 SELECT id, $1, '\\x00', sha256('\\x00') FROM mods",
+            )
+            .bind(bad.text())
+            .execute(api.pool()),
         )
         .unwrap();
         assert_eq!(

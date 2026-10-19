@@ -40,7 +40,7 @@
           src = pkgs.lib.cleanSource ./.;
           # `cargoHash`, not `cargoLock.lockFile`: the latter fetches from crates.io's API
           # with a curl User-Agent, which crates.io refuses. Update after Cargo.lock changes.
-          cargoHash = "sha256-fkpvsWe56Ra8nw4R3oCK88CEf/sIGvpOb87wsKXLRxk=";
+          cargoHash = "sha256-O5bt44YHD5OnYvLet3UUWD88kqN1HNPrHV+EQu2LNaI=";
           cargoBuildFlags = [
             "--package"
             "modhub-server"

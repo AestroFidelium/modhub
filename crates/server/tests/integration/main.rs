@@ -10,6 +10,9 @@ mod database;
 #[path = "../support/http.rs"]
 mod http;
 #[cfg(test)]
+#[path = "../support/modules.rs"]
+mod modules;
+#[cfg(test)]
 #[path = "../support/slots.rs"]
 mod slots;
 
@@ -19,6 +22,8 @@ mod api_failure;
 mod api_model;
 #[cfg(test)]
 mod binary;
+#[cfg(test)]
+mod corrupt_module;
 #[cfg(test)]
 mod corrupt_version;
 #[cfg(test)]

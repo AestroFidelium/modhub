@@ -15,9 +15,12 @@ fn invalid_stored_version_is_reported_as_corruption() {
         let name = "cloth".parse().unwrap();
         db.run(db.store().register(&name)).unwrap();
         db.run(
-            sqlx::query("INSERT INTO releases (mod_id, version) SELECT id, $1 FROM mods")
-                .bind(bad.text())
-                .execute(db.pool()),
+            sqlx::query(
+                "INSERT INTO releases (mod_id, version, module, sha256) \
+                 SELECT id, $1, '\\x00', sha256('\\x00') FROM mods",
+            )
+            .bind(bad.text())
+            .execute(db.pool()),
         )
         .unwrap();
 

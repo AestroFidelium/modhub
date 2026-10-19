@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO releases (mod_id, version, module, sha256)\n             SELECT id, $2, $3, $4 FROM mods WHERE name = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Bytea",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a21d04fe33b9cc20be114c64409cff5fc79abe9fbeb64c15d7e45a1080f44275"
+}

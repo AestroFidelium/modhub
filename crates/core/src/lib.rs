@@ -5,6 +5,8 @@ mod mod_module;
 mod mod_name;
 mod mod_version;
 
-pub use mod_module::{EntryPoint, ExportKind, ModModule, ModuleError, Signature, ValType};
+pub use mod_module::{
+    CheckedModule, EntryPoint, ExportKind, ModModule, ModuleError, Signature, ValType,
+};
 pub use mod_name::{ModName, ModNameError};
 pub use mod_version::{ModVersion, ModVersionError};

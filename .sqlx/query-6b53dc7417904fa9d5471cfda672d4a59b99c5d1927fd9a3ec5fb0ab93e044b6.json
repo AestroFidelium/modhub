@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.module AS \"module?\", r.sha256 AS \"sha256?\"\n               FROM mods m LEFT JOIN releases r ON r.mod_id = m.id AND r.version = $2\n               WHERE m.name = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "module?",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 1,
+        "name": "sha256?",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "6b53dc7417904fa9d5471cfda672d4a59b99c5d1927fd9a3ec5fb0ab93e044b6"
+}

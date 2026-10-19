@@ -196,3 +196,20 @@ fn advertised_limits() {
     // The host's default memory cap: 64 MiB in 64 KiB pages.
     assert_eq!(ModModule::MAX_MEMORY_PAGES * 64 * 1024, 64 * 1024 * 1024);
 }
+
+/// `check` is `inspect` that keeps the bytes: same verdict, and the bytes it hands on
+/// are exactly the ones checked, so storage can only ever receive checked modules.
+#[test]
+fn check_keeps_exactly_the_checked_bytes() {
+    check!().with_type::<ModuleSpec>().for_each(|spec| {
+        let bytes = spec.encode();
+        match (ModModule::check(&bytes), ModModule::inspect(&bytes)) {
+            (Ok(checked), Ok(module)) => {
+                assert_eq!(checked.bytes(), bytes.as_slice());
+                assert_eq!(checked.module(), &module);
+            }
+            (Err(_), Err(_)) => {}
+            (checked, inspected) => panic!("check {checked:?} vs inspect {inspected:?}"),
+        }
+    });
+}
