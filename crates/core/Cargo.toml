@@ -14,10 +14,13 @@ workspace = true
 
 [dependencies]
 semver.workspace = true
+stormlight_mod_abi.workspace = true
 thiserror.workspace = true
+wasmparser.workspace = true
 
 [dev-dependencies]
 bolero.workspace = true
+wasm-encoder.workspace = true
 
 [[test]]
 name = "property"

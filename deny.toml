@@ -25,3 +25,5 @@ allow-wildcard-paths = true
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+# The Stormlight mod ABI: the validator checks modules against the game's own contract.
+allow-git = ["https://github.com/AestroFidelium/stormlight-sdk.git"]
