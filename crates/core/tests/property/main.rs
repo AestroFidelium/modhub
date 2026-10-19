@@ -6,6 +6,11 @@
 #[cfg(test)]
 #[path = "../support/names.rs"]
 mod names;
+#[cfg(test)]
+#[path = "../support/versions.rs"]
+mod versions;
 
 #[cfg(test)]
 mod mod_name;
+#[cfg(test)]
+mod mod_version;

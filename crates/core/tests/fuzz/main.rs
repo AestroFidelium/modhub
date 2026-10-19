@@ -3,3 +3,5 @@
 
 #[cfg(test)]
 mod mod_name;
+#[cfg(test)]
+mod mod_version;
