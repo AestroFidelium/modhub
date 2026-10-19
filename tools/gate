@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The quality gate. Nothing is committed that fails it.
 #
-#   tools/gate quick   fmt + clippy + nextest          (pre-commit hook runs this)
-#   tools/gate all     quick + doctests + deny + machete + typos + nix lints   (before merging to main)
+#   tools/gate quick   postgres + fmt + clippy + nextest   (pre-commit hook runs this)
+#   tools/gate all     quick + doctests + deny + machete + sqlx cache + typos + nix lints   (before merging to main)
 #   tools/gate cov     branch coverage report (cargo llvm-cov nextest --branch) → target/llvm-cov/html
 #
 # Runs inside the nix dev shell; re-enters it when called from outside (e.g. a git hook).
@@ -15,6 +15,7 @@ fi
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
 quick() {
+  step "postgres"; tools/pg start
   step "fmt";    cargo fmt --all --check
   step "clippy"; cargo clippy --workspace --all-targets --all-features --quiet -- -D warnings
   step "tests";  cargo nextest run --workspace --status-level fail --final-status-level fail
@@ -25,11 +26,13 @@ all() {
   step "doctests"; cargo test --workspace --doc --quiet
   step "deny";     cargo deny --log-level error check
   step "machete";  cargo machete
+  step "sqlx";     cargo sqlx prepare --workspace --check
   step "typos";    typos
   step "nix";      nixfmt --check flake.nix && statix check . && deadnix --fail .
 }
 
 cov() {
+  tools/pg start
   cargo llvm-cov nextest --workspace --branch --html
 }
 

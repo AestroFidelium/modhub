@@ -6,3 +6,6 @@
 /crashes/
 /mutants/
 /mutants.out*
+
+# Local PostgreSQL cluster (tools/pg).
+/.pg/
