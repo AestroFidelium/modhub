@@ -7,8 +7,12 @@ mod ABI, serve). Portfolio project for Rust backend roles: tokio, axum, PostgreS
 ## Shape
 
 - `crates/core`: pure domain, no IO. Every rule a request is checked against lives here.
-- `crates/server`: thin shell over core. `Store` (PostgreSQL via sqlx `query!` macros,
-  checked at compile time against `DATABASE_URL`); the HTTP API comes next.
+- `crates/server`: thin shell over core. `api` (axum router; handlers parse into core
+  types, `ApiError` maps every failure to a status and a stable JSON `error` code;
+  store failures log and answer `500 internal`), `store` (PostgreSQL via sqlx `query!`
+  macros, checked at compile time against `DATABASE_URL`). The binary comes next.
+- API tests drive the router in-process (`tests/support/http.rs`, `TestApi`), model-based
+  like the store tests (`api_model.rs`).
 - Migrations: `crates/server/migrations/`, embedded with `sqlx::migrate!`. After changing a
   query or a migration run `cargo sqlx prepare --workspace` and commit `.sqlx/`
   (`tools/gate all` checks it is current).

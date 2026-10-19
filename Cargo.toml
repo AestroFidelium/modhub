@@ -14,15 +14,21 @@ repository = "https://gitlab.com/AestroFidelium/modhub"
 [workspace.dependencies]
 modhub-core = { path = "crates/core" }
 
+axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "tokio"] }
 semver = "1.0.28"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
 # 0.8, not 0.9: the sqlx-cli in nixpkgs is 0.8.6 and writes the offline query cache
 # (.sqlx/) in its own version's format. Bump together with nixpkgs' sqlx-cli.
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate"] }
 thiserror = "2.0.21"
+tracing = "0.1.44"
 
 # ── tests ──
 bolero = "0.13.7"
 tokio = { version = "1.53.3", features = ["rt"] }
+tower = { version = "0.5.3", features = ["util"] }
+http-body-util = "0.1.5"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

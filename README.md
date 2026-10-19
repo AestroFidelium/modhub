@@ -3,14 +3,25 @@
 A registry for [Stormlight](https://github.com/AestroFidelium/stormlight-sdk) WASM mods:
 publish a mod, version it, validate it against the mod ABI, and serve it to game servers.
 
-> Status: early. The domain core is being built test-first; the HTTP service comes next.
+> Status: early. Registration, publishing and listing work end to end over HTTP;
+> the server binary, mod uploads and validation come next.
+
+## API
+
+| Method | Path | Does |
+| --- | --- | --- |
+| `POST` | `/mods` | register `{"name": "gpu-cloth"}` → `201` |
+| `PUT` | `/mods/{name}/versions/{version}` | publish a release → `201` |
+| `GET` | `/mods/{name}/versions` | versions, lowest precedence first → `200` |
+
+Errors are JSON, `{"error": "version_exists", "message": "…"}`: branch on `error`.
 
 ## Layout
 
 | Crate | Holds |
 | --- | --- |
 | `crates/core` (`modhub-core`) | Pure domain: names, versions, validation rules. No IO. |
-| `crates/server` (`modhub-server`) | PostgreSQL store (sqlx, compile-time checked queries); the HTTP API comes next. |
+| `crates/server` (`modhub-server`) | HTTP API (axum) over a PostgreSQL store (sqlx, compile-time checked queries). |
 
 ## Development
 
