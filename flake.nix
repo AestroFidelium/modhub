@@ -27,6 +27,43 @@
 
         rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
+        rustPlatform = pkgs.makeRustPlatform {
+          cargo = rust;
+          rustc = rust;
+        };
+
+        # The server binary. Built without a database: sqlx checks queries against the
+        # committed .sqlx/ cache. Tests need PostgreSQL and run in tools/gate instead.
+        modhub = rustPlatform.buildRustPackage {
+          pname = "modhub";
+          version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package.version;
+          src = pkgs.lib.cleanSource ./.;
+          # `cargoHash`, not `cargoLock.lockFile`: the latter fetches from crates.io's API
+          # with a curl User-Agent, which crates.io refuses. Update after Cargo.lock changes.
+          cargoHash = "sha256-fkpvsWe56Ra8nw4R3oCK88CEf/sIGvpOb87wsKXLRxk=";
+          cargoBuildFlags = [
+            "--package"
+            "modhub-server"
+            "--bin"
+            "modhub"
+          ];
+          SQLX_OFFLINE = "true";
+          doCheck = false;
+          # .cargo/config.toml links through clang + mold.
+          nativeBuildInputs = with pkgs; [
+            clang
+            mold
+          ];
+          meta = {
+            description = "A registry for Stormlight WASM mods";
+            license = with pkgs.lib.licenses; [
+              mit
+              asl20
+            ];
+            mainProgram = "modhub";
+          };
+        };
+
         # TDD + fuzzing + coverage + mutation testing. nextest is the only blessed runner.
         testTools = with pkgs; [
           cargo-nextest
@@ -58,6 +95,8 @@
         ];
       in
       {
+        packages.default = modhub;
+
         devShells.default = pkgs.mkShell {
           packages = [ rust ] ++ testTools ++ lintTools ++ nativeTools ++ dbTools;
 

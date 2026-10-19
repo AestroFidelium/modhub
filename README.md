@@ -4,7 +4,25 @@ A registry for [Stormlight](https://github.com/AestroFidelium/stormlight-sdk) WA
 publish a mod, version it, validate it against the mod ABI, and serve it to game servers.
 
 > Status: early. Registration, publishing and listing work end to end over HTTP;
-> the server binary, mod uploads and validation come next.
+> mod uploads and WASM validation come next.
+
+## Run
+
+```sh
+tools/pg start                      # local PostgreSQL (or point DATABASE_URL elsewhere)
+nix run                             # listens on 127.0.0.1:8080
+curl -X POST localhost:8080/mods -H 'content-type: application/json' -d '{"name":"gpu-cloth"}'
+curl -X PUT  localhost:8080/mods/gpu-cloth/versions/1.0.0
+curl         localhost:8080/mods/gpu-cloth/versions
+```
+
+| Variable | Default | |
+| --- | --- | --- |
+| `DATABASE_URL` | required | `postgres://` or `postgresql://` URL |
+| `MODHUB_LISTEN` | `127.0.0.1:8080` | `IP:port` |
+| `RUST_LOG` | `info,sqlx=warn` | log filter; logs go to stderr |
+
+Stops on SIGTERM or Ctrl-C after in-flight requests finish.
 
 ## API
 

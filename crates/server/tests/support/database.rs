@@ -67,6 +67,17 @@ impl TestDb {
         })
     }
 
+    /// A URL of this database, with `password` in it (the cluster trusts local users,
+    /// so any password connects).
+    pub(crate) fn url_with_password(&self, password: &str) -> String {
+        let socket = self.admin.get_socket().unwrap().display();
+        format!(
+            "postgres://{}:{password}@localhost/{}?host={socket}",
+            self.admin.get_username(),
+            self.name
+        )
+    }
+
     pub(crate) fn store(&self) -> &Store {
         &self.store
     }

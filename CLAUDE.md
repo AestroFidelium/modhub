@@ -10,9 +10,16 @@ mod ABI, serve). Portfolio project for Rust backend roles: tokio, axum, PostgreS
 - `crates/server`: thin shell over core. `api` (axum router; handlers parse into core
   types, `ApiError` maps every failure to a status and a stable JSON `error` code;
   store failures log and answer `500 internal`), `store` (PostgreSQL via sqlx `query!`
-  macros, checked at compile time against `DATABASE_URL`). The binary comes next.
+  macros, checked at compile time against `DATABASE_URL`), `config` (environment → `Config`,
+  pure, password-free `Debug`), `serve` (graceful shutdown). `src/main.rs` is the `modhub`
+  binary: config, logs, pool, migrations, signal handlers, serve.
+- `nix build` / `nix run` build the binary with `SQLX_OFFLINE`; after `Cargo.lock` changes,
+  set `cargoHash` in `flake.nix` to `lib.fakeHash`, build, copy the reported hash.
 - API tests drive the router in-process (`tests/support/http.rs`, `TestApi`), model-based
-  like the store tests (`api_model.rs`).
+  like the store tests (`api_model.rs`). `binary.rs` runs the built binary as a process
+  (startup failures, SIGTERM/SIGINT, no password in logs) with deadlines, never hangs.
+- Check what a test actually reaches: `cargo llvm-cov report --text` shows per-line counts.
+  A rule hit a handful of times means the generator rarely gets there; fix the generator.
 - Migrations: `crates/server/migrations/`, embedded with `sqlx::migrate!`. After changing a
   query or a migration run `cargo sqlx prepare --workspace` and commit `.sqlx/`
   (`tools/gate all` checks it is current).
