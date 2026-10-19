@@ -1,5 +1,6 @@
 /target
 /result
+/result-*
 /.direnv
 
 # Night runs (tools/fuzz_night.sh, tools/mutants_night.sh) and ad-hoc `cargo mutants`.
@@ -9,3 +10,9 @@
 
 # Local PostgreSQL cluster (tools/pg).
 /.pg/
+
+# Coverage for CI (tools/gate lcov) and profiler output (samply, perf, flamegraph).
+/lcov.info
+/profile.json*
+/perf.data*
+/flamegraph.svg

@@ -27,6 +27,11 @@
 
         rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
+        workspace = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package;
+
+        # The oldest stable Rust the code claims to build on; CI checks the claim.
+        msrv = pkgs.rust-bin.stable."${workspace.rust-version}.0".minimal;
+
         rustPlatform = pkgs.makeRustPlatform {
           cargo = rust;
           rustc = rust;
@@ -36,7 +41,7 @@
         # committed .sqlx/ cache. Tests need PostgreSQL and run in tools/gate instead.
         modhub = rustPlatform.buildRustPackage {
           pname = "modhub";
-          version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package.version;
+          inherit (workspace) version;
           src = pkgs.lib.cleanSource ./.;
           # `cargoHash`, not `cargoLock.lockFile`: the latter fetches from crates.io's API
           # with a curl User-Agent, which crates.io refuses. Update after Cargo.lock changes.
@@ -77,6 +82,7 @@
           cargo-deny
           cargo-machete
           typos
+          actionlint
           nixfmt
           statix
           deadnix
@@ -104,21 +110,46 @@
           postgresql_18
           sqlx-cli
         ];
+
+        # DATABASE_URL: the unix-socket cluster of tools/pg. sqlx macros check queries
+        # against it at compile time; tests create their own databases on it.
+        databaseUrl = ''
+          export DATABASE_URL="postgres://modhub@localhost/modhub?host=$PWD/.pg"
+        '';
       in
       {
         packages.default = modhub;
 
-        devShells.default = pkgs.mkShell {
-          packages = [ rust ] ++ testTools ++ lintTools ++ perfTools ++ nativeTools ++ dbTools;
+        devShells = {
+          default = pkgs.mkShell {
+            packages = [ rust ] ++ testTools ++ lintTools ++ perfTools ++ nativeTools ++ dbTools;
 
-          # Versioned hooks in .githooks/: pre-commit runs `tools/gate quick`,
-          # commit-msg enforces Conventional Commits. Fix hooks there, never in .git/hooks.
-          # DATABASE_URL: the unix-socket cluster of tools/pg. sqlx macros check queries
-          # against it at compile time; tests create their own databases on it.
-          shellHook = ''
-            git config core.hooksPath .githooks 2>/dev/null || true
-            export DATABASE_URL="postgres://modhub@localhost/modhub?host=$PWD/.pg"
-          '';
+            # Versioned hooks in .githooks/: pre-commit runs `tools/gate quick`,
+            # commit-msg enforces Conventional Commits. Fix hooks there, never in .git/hooks.
+            shellHook = ''
+              git config core.hooksPath .githooks 2>/dev/null || true
+            ''
+            + databaseUrl;
+          };
+
+          # GitHub Actions: what the gate, coverage and benches need, and nothing that misses
+          # the binary cache (the overridden cargo-codspeed above builds from source).
+          ci = pkgs.mkShell {
+            packages = [
+              rust
+              pkgs.cargo-nextest
+              pkgs.cargo-llvm-cov
+              pkgs.cargo-codspeed
+            ]
+            ++ lintTools
+            ++ nativeTools
+            ++ dbTools;
+            shellHook = databaseUrl;
+          };
+
+          msrv = pkgs.mkShell {
+            packages = [ msrv ] ++ nativeTools;
+          };
         };
 
         formatter = pkgs.nixfmt;

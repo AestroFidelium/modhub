@@ -1,5 +1,11 @@
 # modhub
 
+[![CI](https://github.com/AestroFidelium/modhub/actions/workflows/ci.yml/badge.svg)](https://github.com/AestroFidelium/modhub/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/AestroFidelium/modhub/graph/badge.svg)](https://codecov.io/gh/AestroFidelium/modhub)
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/AestroFidelium/modhub)
+[![MSRV](https://img.shields.io/badge/MSRV-1.89-orange.svg)](Cargo.toml)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+
 A registry for [Stormlight](https://github.com/AestroFidelium/stormlight-sdk) WASM mods:
 publish a mod, version it, validate it against the mod ABI, and serve it to game servers.
 
@@ -11,16 +17,57 @@ a server never downloads a mod its engine would refuse to load.
 > [issues](https://github.com/AestroFidelium/modhub/issues); pull requests
 > are disabled.
 
+```mermaid
+flowchart LR
+    client([game server / mod author]) -- HTTP --> api
+    subgraph server [modhub-server]
+        api[axum API] --> store[store: sqlx]
+    end
+    subgraph core [modhub-core: pure, no IO]
+        name[ModName] ~~~ version[ModVersion] ~~~ module[ModModule::inspect]
+    end
+    api -- parse and check --> core
+    store --> pg[(PostgreSQL)]
+```
+
+The HTTP layer only parses requests into `modhub-core` types; every rule a request is
+checked against lives in the core crate, which does no IO and is tested in isolation.
+
 ## Run
 
+With [Nix](https://nixos.org) (flakes):
+
 ```sh
-tools/pg start                      # local PostgreSQL (or point DATABASE_URL elsewhere)
-nix run                             # listens on 127.0.0.1:8080
-curl -X POST localhost:8080/mods -H 'content-type: application/json' -d '{"name":"gpu-cloth"}'
-curl -X PUT  localhost:8080/mods/gpu-cloth/versions/1.0.0 \
-     -H 'content-type: application/wasm' --data-binary @gpu_cloth.wasm
-curl         localhost:8080/mods/gpu-cloth/versions
-curl -o gpu_cloth.wasm localhost:8080/mods/gpu-cloth/versions/1.0.0
+tools/pg start          # local PostgreSQL on a unix socket under .pg/
+nix run                 # listens on 127.0.0.1:8080
+```
+
+Without Nix: a PostgreSQL to point `DATABASE_URL` at, `rustup`, `clang` and
+[`mold`](https://github.com/rui314/mold) (the configured linker), then
+`SQLX_OFFLINE=true cargo run --release -p modhub-server`. Migrations run on startup.
+
+Publish the example mod from the test fixtures:
+
+```sh
+curl -X POST localhost:8080/mods -H 'content-type: application/json' -d '{"name":"example"}'
+curl -X PUT localhost:8080/mods/example/versions/1.0.0 \
+     -H 'content-type: application/wasm' \
+     --data-binary @crates/core/tests/fixtures/example_mod.wasm
+```
+
+```json
+{
+  "name": "example",
+  "version": "1.0.0",
+  "sha256": "11396bb31d9c8902a96940ce4b20bf576784023fc2a7a9adead10780fb3b7f62",
+  "size": 162755,
+  "entry_points": ["handle", "trigger", "tick"]
+}
+```
+
+```sh
+curl localhost:8080/mods/example/versions              # {"name":"example","versions":["1.0.0"]}
+curl -o example.wasm localhost:8080/mods/example/versions/1.0.0
 ```
 
 | Variable | Default | |
@@ -44,7 +91,11 @@ Releases are immutable: a version is published once (`409 version_exists` after)
 always serves the same bytes. The SHA-256 stored with a module is checked on every
 download; a mismatch is a `500`, never a corrupt module.
 
-Errors are JSON, `{"error": "version_exists", "message": "…"}`: branch on `error`.
+Errors are JSON with a stable machine-readable code; branch on `error`, not on `message`:
+
+```json
+{"error": "version_exists", "message": "`example` 1.0.0 is already published, and releases are immutable"}
+```
 
 ## The mod contract
 
@@ -102,7 +153,7 @@ Test-first, and every test is a property or fuzz test on
 direnv allow        # or: nix develop
 tools/pg start      # local PostgreSQL on a unix socket under .pg/ (the gate starts it too)
 cargo t             # tests (nextest)
-tools/gate all      # everything CI checks
+tools/gate all      # everything CI checks (plus coverage, benches and MSRV in CI)
 tools/fuzz_night.sh 10m     # fuzz campaign → crashes/LATEST.md
 tools/mutants_night.sh 10m  # mutation testing → mutants/LATEST.md
 ```
@@ -112,4 +163,5 @@ checked for holes with [cargo-mutants](https://mutants.rs).
 
 ## License
 
-MIT OR Apache-2.0.
+Licensed under either of [Apache License 2.0](LICENSE-APACHE) or
+[MIT license](LICENSE-MIT), at your option.

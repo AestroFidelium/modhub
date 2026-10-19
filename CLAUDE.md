@@ -8,8 +8,10 @@ mod ABI, serve). Portfolio project for Rust backend roles: tokio, axum, PostgreS
 
 GitLab `AestroFidelium/modhub` (private) is the upstream: push there only. GitHub
 `AestroFidelium/modhub` is a public push mirror of protected branches; never push to
-it by hand, the mirror overwrites it. The GitHub token behind the mirror expires:
-when GitHub stops updating, check Settings → Repository → Mirroring in GitLab.
+it by hand, the mirror overwrites it. The mirror pushes with a fine-grained GitHub token
+(this repository only, Contents + Workflows write; without Workflows GitHub rejects any
+push touching `.github/workflows/`). When GitHub stops updating, check Settings →
+Repository → Mirroring in GitLab.
 
 ## Shape
 
@@ -59,6 +61,11 @@ when GitHub stops updating, check Settings → Repository → Mirroring in GitLa
   `tests/support/` (generators; each domain range is generated in one place).
 - Gate: `tools/gate quick` (pre-commit hook), `tools/gate all` before merging to main,
   `tools/gate cov` for branch coverage.
+- CI: GitHub Actions only (`.github/workflows/ci.yml`), runs on the mirror after it
+  updates `main`: `tools/gate all`, coverage → Codecov, benches → CodSpeed (both OIDC, no
+  secrets), MSRV check. Jobs run in `devShells.ci` / `devShells.msrv`: keep `ci` to
+  packages in the nixos binary cache, so CI never builds tools from source. MSRV is
+  `rust-version` in `Cargo.toml`; the flake reads it from there. No GitLab CI.
 - Night runs (copied from atelier, reports for an agent to work from):
   - `tools/fuzz_night.sh <budget> [filter] [threads]` → `crashes/LATEST.md`
   - `tools/mutants_night.sh <budget> [all|core,…] [jobs]` → `mutants/LATEST.md`

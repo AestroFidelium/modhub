@@ -1,0 +1,79 @@
+# Runs on the public GitHub mirror. Every job uses the flake's dev shells, so CI checks
+# with exactly the tools and toolchain a local `tools/gate all` uses.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/nix
+        with:
+          shell: ci
+      - run: nix develop .#ci -c tools/gate all
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Codecov upload through OIDC, no token secret
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/nix
+        with:
+          shell: ci
+      - run: nix develop .#ci -c tools/gate lcov
+      - uses: codecov/codecov-action@v7
+        with:
+          files: lcov.info
+          use_oidc: true
+          fail_ci_if_error: true
+
+  bench:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # CodSpeed upload through OIDC, no token secret
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/nix
+        with:
+          shell: ci
+      - run: nix develop .#ci -c cargo codspeed build -p modhub-core
+      # The benches run under CodSpeed's instrumentation, which traces every child
+      # process: export the shell's PATH instead of entering `nix develop` inside it.
+      - run: echo "PATH=$(nix develop .#ci -c printenv PATH)" >>"$GITHUB_ENV"
+      - uses: CodSpeedHQ/action@v5
+        with:
+          mode: simulation
+          run: cargo codspeed run
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    env:
+      SQLX_OFFLINE: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/nix
+        with:
+          shell: msrv
+      - run: nix develop .#msrv -c cargo check --workspace --locked
