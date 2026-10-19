@@ -18,6 +18,8 @@ mod api_failure;
 #[cfg(test)]
 mod api_model;
 #[cfg(test)]
+mod binary;
+#[cfg(test)]
 mod corrupt_version;
 #[cfg(test)]
 mod database_failure;
@@ -25,3 +27,5 @@ mod database_failure;
 mod name_rule;
 #[cfg(test)]
 mod registry_model;
+#[cfg(test)]
+mod serve;

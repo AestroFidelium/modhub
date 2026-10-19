@@ -45,10 +45,8 @@ impl IntoResponse for ApiError {
             // Our fault, and the details (SQL, row contents) are not the client's business:
             // they go to the log, the client gets a generic answer.
             Self::Store(StoreError::CorruptVersion { .. } | StoreError::Database(_)) => {
-                tracing::error!(
-                    error = &self as &dyn std::error::Error,
-                    "request failed in the store"
-                );
+                let error: &dyn std::error::Error = &self;
+                tracing::error!(error, "request failed in the store");
                 let body = ErrorBody {
                     error: "internal",
                     message: Cow::Borrowed("internal server error"),

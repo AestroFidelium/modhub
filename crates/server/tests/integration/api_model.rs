@@ -11,10 +11,16 @@ use serde_json::{Value, json};
 use crate::http::{Payload, Reply, TestApi};
 use crate::slots::{NameSlot, VersionSlot};
 
-/// A name as a client might send it: one of the valid slots or a rule-breaking one.
+/// A name as a client might send it. Valid half the time (enum variants are drawn
+/// evenly), so requests often get past validation to the rules behind it.
 #[derive(Debug, Clone, Copy, TypeGenerator)]
 enum NameInput {
     Valid(NameSlot),
+    Invalid(BadName),
+}
+
+#[derive(Debug, Clone, Copy, TypeGenerator)]
+enum BadName {
     Uppercase,
     Underscore,
     DoubleHyphen,
@@ -24,24 +30,29 @@ impl NameInput {
     fn text(self) -> String {
         match self {
             Self::Valid(slot) => slot.text(),
-            Self::Uppercase => "Mod-a".into(),
-            Self::Underscore => "mod_a".into(),
-            Self::DoubleHyphen => "mod--a".into(),
+            Self::Invalid(BadName::Uppercase) => "Mod-a".into(),
+            Self::Invalid(BadName::Underscore) => "mod_a".into(),
+            Self::Invalid(BadName::DoubleHyphen) => "mod--a".into(),
         }
     }
 
     fn parsed(self) -> Option<ModName> {
         match self {
             Self::Valid(slot) => Some(slot.name()),
-            Self::Uppercase | Self::Underscore | Self::DoubleHyphen => None,
+            Self::Invalid(_) => None,
         }
     }
 }
 
-/// A version as a client might send it.
+/// A version as a client might send it, valid half the time.
 #[derive(Debug, Clone, Copy, TypeGenerator)]
 enum VersionInput {
     Valid(VersionSlot),
+    Invalid(BadVersionText),
+}
+
+#[derive(Debug, Clone, Copy, TypeGenerator)]
+enum BadVersionText {
     NotSemver,
     LeadingZero,
     BuildMetadata,
@@ -51,17 +62,17 @@ impl VersionInput {
     fn text(self) -> String {
         match self {
             Self::Valid(slot) => slot.text(),
-            Self::NotSemver => "latest".into(),
-            Self::LeadingZero => "01.0.0".into(),
+            Self::Invalid(BadVersionText::NotSemver) => "latest".into(),
+            Self::Invalid(BadVersionText::LeadingZero) => "01.0.0".into(),
             // '+' is not reserved in a path segment, so it reaches the handler as is.
-            Self::BuildMetadata => "1.0.0+nightly".into(),
+            Self::Invalid(BadVersionText::BuildMetadata) => "1.0.0+nightly".into(),
         }
     }
 
     fn parsed(self) -> Option<ModVersion> {
         match self {
             Self::Valid(slot) => Some(slot.version()),
-            Self::NotSemver | Self::LeadingZero | Self::BuildMetadata => None,
+            Self::Invalid(_) => None,
         }
     }
 }
@@ -74,7 +85,7 @@ enum BadBody {
     NoContentType,
 }
 
-#[derive(Debug, TypeGenerator)]
+#[derive(Debug, Clone, Copy, TypeGenerator)]
 enum Step {
     Register {
         name: NameInput,
@@ -86,6 +97,12 @@ enum Step {
         name: NameInput,
         version: VersionInput,
     },
+    /// The same publication twice in a row, so conflicts happen in every scenario that
+    /// has one, not only when the generator happens to repeat a version.
+    PublishTwice {
+        name: NameInput,
+        version: VersionInput,
+    },
     ListVersions {
         name: NameInput,
     },
@@ -93,6 +110,10 @@ enum Step {
 
 #[derive(Debug, TypeGenerator)]
 struct Scenario {
+    /// Registered before the steps, so publications land on existing mods and reach
+    /// the rules behind registration (conflicts, ordering) instead of `unknown_mod`.
+    #[generator(produce::<Vec<NameSlot>>().with().len(0usize..=4))]
+    registered: Vec<NameSlot>,
     #[generator(produce::<Vec<Step>>().with().len(1usize..=16))]
     steps: Vec<Step>,
 }
@@ -103,6 +124,7 @@ struct Scenario {
 enum Expected {
     Success { status: u16, body: Value },
     Failure { status: u16, error: &'static str },
+    Twice(Box<(Expected, Expected)>),
 }
 
 impl From<Reply> for Expected {
@@ -137,6 +159,11 @@ struct Model(BTreeMap<ModName, BTreeSet<ModVersion>>);
 impl Model {
     fn apply(&mut self, step: &Step) -> Expected {
         match *step {
+            Step::PublishTwice { name, version } => {
+                let first = self.apply(&Step::Publish { name, version });
+                let second = self.apply(&Step::Publish { name, version });
+                Expected::Twice(Box::new((first, second)))
+            }
             Step::Register { name } => {
                 let Some(parsed) = name.parsed() else {
                     return failure(422, "invalid_name");
@@ -194,6 +221,11 @@ impl Model {
 
 fn run_on_api(api: &TestApi, step: &Step) -> Expected {
     let reply = match *step {
+        Step::PublishTwice { name, version } => {
+            let first = run_on_api(api, &Step::Publish { name, version });
+            let second = run_on_api(api, &Step::Publish { name, version });
+            return Expected::Twice(Box::new((first, second)));
+        }
         Step::Register { name } => api.send(
             Method::POST,
             "/mods",
@@ -226,10 +258,14 @@ fn api_agrees_with_the_model_on_every_request() {
     let api = TestApi::new();
     check!()
         .with_type::<Scenario>()
-        .for_each(|Scenario { steps }| {
+        .for_each(|Scenario { registered, steps }| {
             api.reset();
             let mut model = Model::default();
-            for (index, step) in steps.iter().enumerate() {
+            let setup = registered.iter().map(|&slot| Step::Register {
+                name: NameInput::Valid(slot),
+            });
+            for (index, step) in setup.chain(steps.iter().copied()).enumerate() {
+                let step = &step;
                 assert_eq!(
                     run_on_api(&api, step),
                     model.apply(step),
