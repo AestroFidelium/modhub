@@ -49,15 +49,25 @@
           mold
           clang
         ];
+
+        # Local database (tools/pg) and the sqlx CLI: migrations and the offline query
+        # cache in .sqlx/. The CLI's minor version must match the sqlx crate's.
+        dbTools = with pkgs; [
+          postgresql_18
+          sqlx-cli
+        ];
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = [ rust ] ++ testTools ++ lintTools ++ nativeTools;
+          packages = [ rust ] ++ testTools ++ lintTools ++ nativeTools ++ dbTools;
 
           # Versioned hooks in .githooks/: pre-commit runs `tools/gate quick`,
           # commit-msg enforces Conventional Commits. Fix hooks there, never in .git/hooks.
+          # DATABASE_URL: the unix-socket cluster of tools/pg. sqlx macros check queries
+          # against it at compile time; tests create their own databases on it.
           shellHook = ''
             git config core.hooksPath .githooks 2>/dev/null || true
+            export DATABASE_URL="postgres://modhub@localhost/modhub?host=$PWD/.pg"
           '';
         };
 

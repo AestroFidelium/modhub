@@ -10,11 +10,13 @@ publish a mod, version it, validate it against the mod ABI, and serve it to game
 | Crate | Holds |
 | --- | --- |
 | `crates/core` (`modhub-core`) | Pure domain: names, versions, validation rules. No IO. |
+| `crates/server` (`modhub-server`) | PostgreSQL store (sqlx, compile-time checked queries); the HTTP API comes next. |
 
 ## Development
 
 ```sh
 direnv allow        # or: nix develop
+tools/pg start      # local PostgreSQL on a unix socket under .pg/ (the gate starts it too)
 cargo t             # tests (nextest)
 tools/gate all      # everything CI checks
 tools/fuzz_night.sh 10m     # fuzz campaign → crashes/LATEST.md

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Local PostgreSQL for development, compile-time checked queries and tests.
+#
+#   tools/pg start    init on first use, start, create and migrate the `modhub` database
+#   tools/pg stop
+#   tools/pg status
+#   tools/pg psql     shell into the `modhub` database
+#
+# One cluster under .pg/ (gitignored), unix socket only: no TCP port to collide with or
+# expose. The dev shell points DATABASE_URL at it. Tests create a throwaway database each.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+if [[ -z "${IN_NIX_SHELL:-}" ]]; then
+  exec nix develop --quiet -c "$0" "$@"
+fi
+
+root="$PWD/.pg"
+data="$root/data"
+
+running() { pg_ctl -D "$data" status >/dev/null 2>&1; }
+
+start() {
+  if [[ ! -d "$data" ]]; then
+    mkdir -p "$root"
+    initdb -D "$data" -U modhub --auth=trust --no-locale -E UTF8 >"$root/initdb.log"
+  fi
+  if ! running; then
+    # Durability off: the cluster holds only disposable dev and test data, and on a
+    # spinning disk every fsync'd commit costs ~50 ms (bolero runs hundreds per test).
+    # A crash loses .pg/; `rm -rf .pg && tools/pg start` rebuilds it.
+    pg_ctl -D "$data" -l "$root/server.log" -w \
+      -o "-k $root -c listen_addresses='' -c fsync=off -c synchronous_commit=off -c full_page_writes=off" \
+      start >/dev/null
+  fi
+  sqlx database create
+  sqlx migrate run --source crates/server/migrations >/dev/null
+  drop_orphans
+}
+
+# Test databases are named test_<pid>_<n> and dropped by the test itself; a killed test
+# (an interrupted fuzz run) leaves its database behind. Drop those whose process is gone.
+drop_orphans() {
+  local name pid
+  while read -r name; do
+    pid="${name#test_}"
+    pid="${pid%%_*}"
+    kill -0 "$pid" 2>/dev/null && continue
+    psql "$DATABASE_URL" -qc "DROP DATABASE IF EXISTS \"$name\" WITH (FORCE)"
+  done < <(psql "$DATABASE_URL" -Atc "SELECT datname FROM pg_database WHERE datname ~ '^test_[0-9]+_[0-9]+$'")
+}
+
+case "${1:-}" in
+  start) start ;;
+  stop) running && pg_ctl -D "$data" -w stop >/dev/null || true ;;
+  status) running && echo "running: $DATABASE_URL" || echo "stopped" ;;
+  psql) start && exec psql "$DATABASE_URL" ;;
+  *) echo "usage: tools/pg start|stop|status|psql" >&2; exit 2 ;;
+esac
