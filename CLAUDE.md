@@ -4,6 +4,13 @@ modhub: a registry for Stormlight WASM mods (publish, version, validate against 
 mod ABI, serve). Portfolio project for Rust backend roles: tokio, axum, PostgreSQL
 (sqlx), object storage, background jobs, observability, deployment.
 
+## Hosting
+
+GitLab `AestroFidelium/modhub` (private) is the upstream: push there only. GitHub
+`AestroFidelium/modhub` is a public push mirror of protected branches; never push to
+it by hand, the mirror overwrites it. The GitHub token behind the mirror expires:
+when GitHub stops updating, check Settings → Repository → Mirroring in GitLab.
+
 ## Shape
 
 - `crates/core`: pure domain, no IO. Every rule a request is checked against lives here.

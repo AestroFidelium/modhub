@@ -6,6 +6,11 @@ publish a mod, version it, validate it against the mod ABI, and serve it to game
 Every upload is checked against the game's own mod contract before it is stored, so
 a server never downloads a mod its engine would refuse to load.
 
+> This repository is a read-only mirror of a private upstream, where development
+> and planning happen. Bug reports and feedback are welcome as
+> [issues](https://github.com/AestroFidelium/modhub/issues); pull requests
+> are disabled.
+
 ## Run
 
 ```sh
